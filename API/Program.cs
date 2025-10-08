@@ -18,10 +18,41 @@ app.UseHttpsRedirection();
 
 
 // CRUD USERS
-app.MapGet("/api/users", async (Context context) =>
+app.MapGet("/api/users", async (
+    Context context,
+    bool? isHirer,
+    bool? isPassenger,
+    bool? isFinancialManager) =>
 {
-    var users = await context.Users.ToListAsync();
+    var query = context.Users.AsQueryable();
+
+    if (isHirer.HasValue)
+    {
+        if (isHirer.Value)
+            query = query.Where(u => (u.Roles & ERoles.Hirer) == ERoles.Hirer);
+        else
+            query = query.Where(u => (u.Roles & ERoles.Hirer) != ERoles.Hirer);
+    }
+
+    if (isPassenger.HasValue)
+    {
+        if (isPassenger.Value)
+            query = query.Where(u => (u.Roles & ERoles.Passenger) == ERoles.Passenger);
+        else
+            query = query.Where(u => (u.Roles & ERoles.Passenger) != ERoles.Passenger);
+    }
+
+    if (isFinancialManager.HasValue)
+    {
+        if (isFinancialManager.Value)
+            query = query.Where(u => (u.Roles & ERoles.FinancialManager) == ERoles.FinancialManager);
+        else
+            query = query.Where(u => (u.Roles & ERoles.FinancialManager) != ERoles.FinancialManager);
+    }
+
+    var users = await query.ToListAsync();
     var userDtos = users.Select(Helpers.ConvertToUserDto).ToList();
+
     return Results.Ok(userDtos);
 });
 
@@ -99,7 +130,7 @@ app.MapPut("/users/{id}/add-passenger-role", async (int id, Context context) =>
 {
     var user = await context.Users.FindAsync(id);
     if (user == null) return Results.NotFound();
-
+      
     user.Roles |= ERoles.Passenger;
     await context.SaveChangesAsync();
 
